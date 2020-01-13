@@ -1,1 +1,1 @@
-# Homework10
+Node.js application with full CRUD capability in a 'convenient' CLI, along with companion schema file which will set up a database which the app can communicate with.

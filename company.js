@@ -6,7 +6,7 @@ var connection = mysql.createConnection({
     host: "localhost",
     port: 3306,
     user: "root",
-    password: "i guess it really is mySQL",
+    password: "",
     database: "company_db"
 });
 
@@ -139,27 +139,128 @@ function display() {
             missionSelect();
         }
         else if (info.show === "Departments") {
-            connection.query("SELECT * FROM department", (err, res)=>{
+            connection.query("SELECT * FROM department", (err, res) => {
                 if (err) throw err;
                 console.table(res);
+                missionSelect();
             });
         }
         else if (info.show === "Roles") {
             var query = "SELECT role.position, department.department FROM role ";
             query += "INNER JOIN department ON (department.id = role.department_id)";
-            connection.query(query, (err, res)=>{
+            connection.query(query, (err, res) => {
                 if (err) throw err;
                 console.table(res);
-            })
+                missionSelect();
+            });
         }
     })
 }
 
 function update() {
-
+    var query = "SELECT employees.first_name, employees.last_name, role.position ";
+    query += "FROM employees INNER JOIN role ON (employees.role_id = role.id)";
+    connection.query(query, (err, res) => {
+        if (err) throw err;
+        var emps = [];
+        res.forEach(person => {
+            emps.push(`${person.first_name} ${person.last_name}, ${person.position}`);
+        });
+        inq.prompt([{
+            type: "rawlist",
+            name: "empUp",
+            message: "Which employee would you like to change?",
+            choices: emps
+        },
+        {
+            type: "number",
+            name: "newJob",
+            message: "ID of new position?",
+        }]).then(info => {
+            let emp = info.empUp.trim().split(" ");
+            connection.query(`UPDATE employees SET role_id = ${info.newJob} WHERE employees.first_name = ${emp[0]} AND employees.last_name = ${emp[1]}`, (err, res) => {
+                if (err) throw err;
+                console.log("Record updated.");
+                missionSelect();
+            });
+        });
+    });
 }
 
 function subtract() {
-
+    inq.prompt({
+        type: "list",
+        name: "rem",
+        message: "What kind of record would you like to purge?",
+        choices: ["Employee", "Department", "Role"]
+    }).then(yeet => {
+        if (yeet.rem === "Employee") {
+            var query = "SELECT employees.first_name, employees.last_name, role.position ";
+            query += "FROM employees INNER JOIN role ON (employees.role_id = role.id)";
+            connection.query(query, (err, res) => {
+                if (err) throw err;
+                var emps = [];
+                res.forEach(person => {
+                    emps.push(`${person.first_name} ${person.last_name}, ${person.position}`);
+                });
+                inq.prompt({
+                    type: "list",
+                    name: "name",
+                    message: "Who's fired?",
+                    choices: emps
+                }).then(yote => {
+                    let person = yote.name.trim().split(" ");
+                    connection.query(`DELETE FROM employees WHERE first_name = ${person[0]} AND last_name = ${person[1]}`, (err, res) => {
+                        if (err) throw err;
+                        console.log(`${yote.name} has LEFT THE BUILDING`);
+                        missionSelect();
+                    })
+                })
+            })
+        }
+        else if (yeet.rem === "Department") {
+            connection.query("SELECT * FROM department", (err, res)=>{
+                if (err) throw err;
+                let deps = [];
+                res.forEach(item=>{
+                    deps.push(item.department);
+                });
+                inq.prompt({
+                    type:"list",
+                    name:"dep",
+                    message:"Which department is being 'restructured'?",
+                    choices: deps
+                }).then(info=>{
+                    connection.query(`DELETE FROM department WHERE department = ${info.dep}`, (err, res)=>{
+                        if (err) throw err;
+                        console.log(`Department "${info.dep}" dissolved.`);
+                        missionSelect();
+                    })
+                })
+            })
+        }
+        else if (yeet.rem === "Role") {
+            console.log("PLEASE MAKE SURE TO REPLACE THIS ID WITH A NEW ROLE AND/OR REASSIGN ALL EMPLOYEES FIRST!");
+            connection.query("SELECT position FROM role", (err, res)=>{
+                if (err) throw err;
+                let jobs = [];
+                res.forEach(item=>{
+                    jobs.push(item.position);
+                });
+                inq.prompt({
+                    type: "list",
+                    name: "jorb",
+                    message: "What position no longer exists at this company?",
+                    choices: jobs
+                }).then(info=>{
+                    connection.query(`DELETE FROM role WHERE position = ${info.jorb}`, (err, res)=>{
+                        if (err) throw err;
+                        console.log("role removed.");
+                        missionSelect();
+                    })
+                })
+            })
+        }
+    })
 }
 
